@@ -9,7 +9,7 @@ from .const import PROVINCIAS_ENDPOINT, ESTACIONES_ENDPOINT,TODAS_GASOLINERAS_EN
 def get_provincias():
     """Devuelve el listado de provincias."""
     _LOGGER.debug(f"Obteniendo provincias de: {PROVINCIAS_ENDPOINT}")
-    response = requests.get(PROVINCIAS_ENDPOINT, timeout=15)
+    response = requests.get(PROVINCIAS_ENDPOINT, timeout=15, verify=False)
     response.raise_for_status()
     return response.json()
 
@@ -19,7 +19,7 @@ def get_estaciones_por_provincia(id_provincia: str) -> list:
     _LOGGER.debug(f"Obteniendo estaciones de: {url}")
 
     try:
-        response = requests.get(url, timeout=20)
+        response = requests.get(url, timeout=20, verify=False)
         response.raise_for_status()
         data = response.json()
 
@@ -36,7 +36,7 @@ def get_estaciones_por_provincia(id_provincia: str) -> list:
 def get_estaciones_todas():
     """Obtiene todas las estaciones de servicio de España."""
     _LOGGER.debug(f"Obteniendo todas las estaciones de: {TODAS_GASOLINERAS_ENDPOINT}")
-    response = requests.get(TODAS_GASOLINERAS_ENDPOINT, timeout=30)
+    response = requests.get(TODAS_GASOLINERAS_ENDPOINT, timeout=30, verify=False)
     response.raise_for_status()
     data = response.json()
     estaciones = data.get("ListaEESSPrecio", [])
