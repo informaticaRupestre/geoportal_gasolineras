@@ -2,7 +2,7 @@
   "domain": "geoportal_gasolineras",
   "name": "Geoportal Gasolineras",
   "version": "0.1.0",
-  "documentation": "https://gitlab.com/informaticaRupestre/geoportal_gasolineras",
+  "documentation": "https://github.com/informaticaRupestre/geoportal_gasolineras",
   "requirements": ["requests"],
   "codeowners": ["@informaticaRupestre"],
   "iot_class": "cloud_polling",
