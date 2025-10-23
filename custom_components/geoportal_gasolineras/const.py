@@ -3,7 +3,7 @@
 import requests
 
 
-DOMAIN = "geoportalgasolineras"
+DOMAIN = "geoportal_gasolineras"
 API_BASE = "https://energia.serviciosmin.gob.es/ServiciosRESTCarburantes/PreciosCarburantes"
 TODAS_GASOLINERAS_ENDPOINT =  f"{API_BASE}/EstacionesTerrestres/"
 PROVINCIAS_ENDPOINT = f"{API_BASE}/Listados/Provincias/"
