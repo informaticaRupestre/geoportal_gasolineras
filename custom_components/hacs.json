@@ -1,0 +1,9 @@
+{
+  "name": "Geoportal Gasolineras",
+  "content_in_root": false,
+  "domains": ["geoportal_gasolineras"],
+  "country": "ES",
+  "render_readme": true,
+  "homeassistant": "2024.8.0",
+  "filename": "gas-stations-list-card.js"
+}

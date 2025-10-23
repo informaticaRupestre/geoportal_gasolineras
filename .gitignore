@@ -1,0 +1,79 @@
+# =======================================
+# 🏠 Home Assistant Custom Integration
+# =======================================
+
+# Archivos de entorno local
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+*.swp
+*.swo
+*.bak
+
+# Archivos de IDEs
+.vscode/
+.idea/
+*.iml
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Archivos temporales
+*.log
+*.tmp
+*.cache
+*.pid
+
+# =======================================
+# 🧩 HACS / Home Assistant
+# =======================================
+
+# Configuración local de Home Assistant (no incluir tu configuración personal)
+.homeassistant/
+config/
+secrets.yaml
+home-assistant_v2.db
+home-assistant.log
+
+# =======================================
+# 🌐 Lovelace / Frontend
+# =======================================
+
+# Archivos generados o compilados (por ejemplo, si usas build con rollup/webpack)
+node_modules/
+dist/
+build/
+*.map
+
+# =======================================
+# 📦 Entorno virtual y dependencias
+# =======================================
+
+venv/
+.env/
+.venv/
+env/
+ENV/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+__pypackages__/
+
+# =======================================
+# ⚙️ Otros
+# =======================================
+
+# Backups y zips
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+
+# Archivos de prueba
+test_*.py
+tests/
+.coverage
+htmlcov/
+pytest_cache/
