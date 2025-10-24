@@ -726,11 +726,40 @@ class GasStationsListCardEditor extends (window.LitElement || LitElementBase) {
 // --------------------
 // Register elements
 // --------------------
-customElements.define("gas-stations-list-card", GasStationsListCard);
-customElements.define(
-  "gas-stations-list-card-editor",
-  GasStationsListCardEditor
-);
+
+// Asegura que el editor se registra antes del getConfigElement
+if (!customElements.get("gas-stations-list-card-editor")) {
+  customElements.define(
+    "gas-stations-list-card-editor",
+    GasStationsListCardEditor
+  );
+}
+
+if (!customElements.get("gas-stations-list-card")) {
+  customElements.define("gas-stations-list-card", GasStationsListCard);
+}
+
+// Garantiza compatibilidad con Lovelace GUI
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: "gas-stations-list-card",
+  name: "Gas Stations List Card",
+  description:
+    "Muestra listas de gasolineras cercanas con ordenación y personalización visual.",
+});
+
+// Asegura que Home Assistant pueda instanciar el editor
+GasStationsListCard.getConfigElement = function () {
+  return document.createElement("gas-stations-list-card-editor");
+};
+GasStationsListCard.getStubConfig = function () {
+  return {
+    entities: [],
+    max_height: 380,
+    initial_sort: "distance",
+  };
+};
+
 
 // --------------------
 // Lovelace Catalogue entry (nice to have)
