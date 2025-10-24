@@ -19,47 +19,6 @@ from .api import get_estaciones_por_provincia, get_estaciones_todas
 _LOGGER = logging.getLogger(__name__)
 SCAN_INTERVAL = timedelta(hours=4)  # actualizar cada 4h
 
-async def async_setup_entry_old(hass: HomeAssistant, entry, async_add_entities):
-    """Configura los sensores con la provincia elegida."""
-    provincia_id = entry.data.get("provincia_id")
-    provincia_nombre = entry.data.get("provincia")
-    producto = entry.data.get("producto")
-
-    coordinator = GasolinerasCoordinator(hass, provincia_id)
-    await coordinator.async_config_entry_first_refresh()
-
-    # Sensores básicos
-    sensores = [
-        TotalEstacionesSensor(coordinator, provincia_nombre),
-        GasolineraBarataSensor(coordinator, provincia_nombre, producto),
-        ListaGasolinerasBaratasSensor(coordinator, provincia_nombre, producto),
-        GasolinerasCercanasSensor(coordinator, "Madrid", 40.4168, -3.7038, 20, producto)
-    ]
-
-    # ✅ Crear 5 sensores individuales para cada gasolinera del top 5
-    sensores_individuales = []
-    for i in range(5):
-        sensor = GasolineraIndividualSensor(coordinator, provincia_nombre, producto, i)
-        sensores.append(sensor)
-        sensores_individuales.append(f"sensor.gasolinera_{i + 1}_{provincia_nombre.lower().replace(' ', '_')}_{producto.lower().replace(' ', '_')}")
-
-
-
-    async_add_entities(sensores)
-
-    # ✅ Crear grupo automáticamente
-    group_name = f"gasolineras_{provincia_nombre.lower().replace(' ', '_')}_{producto.lower().replace(' ', '_')}"
-    await hass.services.async_call(
-        "group",
-        "set",
-        {
-            "object_id": group_name,
-            "name": f"🗺️ Gasolineras {provincia_nombre} ({producto})",
-            "entities": sensores_individuales,
-        },
-        blocking=True,
-    )
-
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback):
@@ -249,7 +208,7 @@ class ListaGasolinerasBaratasSensor(SensorEntity):
     def extra_state_attributes(self):
         """Lista de las 5 gasolineras más baratas con detalles."""
         estaciones = self._get_estaciones_validas()
-        top = estaciones[:5]  # top 5
+        top = estaciones[:200]  # top 5
         return {
             "gasolineras": [
                 {
@@ -435,7 +394,7 @@ class GasolinerasCercanasSensor(SensorEntity):
     def extra_state_attributes(self):
         """Devuelve la lista de gasolineras dentro del radio."""
         gasolineras = self._get_gasolineras_en_radio()
-        # Ordenar por distancia ascendente y devolver solo las 10 más cercanas
+        # Ordenar por distancia ascendente y devolver solo las 50 más cercanas
         gasolineras = sorted(gasolineras, key=lambda x: x["distancia_km"])[:50]
         return {"gasolineras": gasolineras}
 
