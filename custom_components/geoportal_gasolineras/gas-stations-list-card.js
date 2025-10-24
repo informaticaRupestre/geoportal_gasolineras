@@ -1,61 +1,38 @@
 // gas-stations-list-card.js
-// Custom card for Home Assistant: Gas Stations List Card
-// - Visual editor (no YAML required)
-// - Supports multiple sensor entities (sensor.gasolineras_cercanas_*)
-// - Per-entity UI customization (name, icon, color)
-// - In-card sorting (price / distance)
-// - Max height with internal scroll
-//
-// Place this file at: /config/www/gas-stations-list-card.js
-// Add to Lovelace resources:
-//   url: /local/gas-stations-list-card.js
-//   type: module
+// Custom Card for Home Assistant: Gas Stations List Card
+// Compatible con instalación manual o HACS
+// Desarrollado para Geoportal Gasolineras
+// -----------------------------------------------------------
 
-/* eslint no-console: 0 */// gas-stations-list-card.js
-// Custom card for Home Assistant: Gas Stations List Card
-// - Visual editor (no YAML required)
-// - Supports multiple sensor entities (sensor.gasolineras_cercanas_*)
-// - Per-entity UI customization (name, icon, color)
-// - In-card sorting (price / distance)
-// - Max height with internal scroll
-//
-// Place this file at: /config/www/gas-stations-list-card.js
-// Add to Lovelace resources:
-//   url: /local/gas-stations-list-card.js
-//   type: module
+console.info(
+  `%c🚗 Gas Stations List Card %cVersion 1.0.1`,
+  "color: white; background: #ff9800; font-weight: bold; padding: 2px 4px; border-radius: 4px 0 0 4px;",
+  "color: white; background: #555; font-weight: bold; padding: 2px 4px; border-radius: 0 4px 4px 0;"
+);
 
-/* eslint no-console: 0 */
-
-const HELP_URL =
-  "https://developers.home-assistant.io/docs/frontend/custom-ui/custom-card/";
-
-const fireEvent = (node, type, detail, options) => {
-  options = options || {};
-  detail = detail === null || detail === undefined ? {} : detail;
+// Helper para eventos
+const fireEvent = (node, type, detail = {}, options = {}) => {
   const event = new Event(type, {
-    bubbles: options.bubbles === undefined ? true : options.bubbles,
-    cancelable: options.cancelable === undefined ? false : options.cancelable,
-    composed: options.composed === undefined ? true : options.composed,
+    bubbles: options.bubbles ?? true,
+    cancelable: options.cancelable ?? false,
+    composed: options.composed ?? true,
   });
   event.detail = detail;
   node.dispatchEvent(event);
-  return event;
 };
 
-// --------------------
-// LitElement imports
-// --------------------
-const { html, css } = window.litHtml || window.Lit || window.litElement || window.litElementHass || window.HADev
-  ? window.litHtml || window.Lit?.html || window.litElement?.html
-  : window.LitHtml || window.litHtml;
+// Asegurar compatibilidad con distintas versiones de HA
+const LitElementClass =
+  window.LitElement ||
+  Object.getPrototypeOf(customElements.get("ha-panel-lovelace")) ||
+  Object.getPrototypeOf(customElements.get("hui-view"));
 
-const LitElementBase =
-  window.LitElement || window.litElement || Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
+const { html, css } = LitElementClass.prototype.constructor;
 
-// --------------------
-// Main Card
-// --------------------
-class GasStationsListCard extends LitElementBase {
+// -----------------------------------------------------------
+// MAIN CARD
+// -----------------------------------------------------------
+class GasStationsListCard extends LitElementClass {
   static get properties() {
     return {
       hass: {},
@@ -66,241 +43,144 @@ class GasStationsListCard extends LitElementBase {
     };
   }
 
+  static getConfigElement() {
+    return document.createElement("gas-stations-list-card-editor");
+  }
+
   static getStubConfig(hass) {
-    const anySensor =
-      hass &&
-      Object.keys(hass.states).find((e) =>
-        e.startsWith("sensor.gasolineras_cercanas")
-      );
+    const entity = hass
+      ? Object.keys(hass.states).find((e) =>
+          e.startsWith("sensor.gasolineras_cercanas")
+        )
+      : undefined;
     return {
-      entities: anySensor
+      entities: entity
         ? [
             {
-              entity: anySensor,
-              name: "",
+              entity,
+              name: "Gasolineras",
               icon: "mdi:gas-station",
               color: "#4CAF50",
             },
           ]
         : [],
-      max_height: 380,
+      max_height: 400,
       initial_sort: "distance",
     };
-  }
-
-  static getConfigElement() {
-    return document.createElement("gas-stations-list-card-editor");
   }
 
   setConfig(config) {
-    if (!config) throw new Error("Missing configuration");
+    if (!config) throw new Error("Falta configuración");
     const defaults = {
       entities: [],
-      max_height: 380,
+      max_height: 400,
       initial_sort: "distance",
     };
     this._config = { ...defaults, ...config };
-    this._sortBy = this._config.initial_sort || "distance";
+    this._sortBy = this._config.initial_sort;
     this._expandedMenu = null;
     this._buildItems();
   }
 
   set hass(hass) {
-    this.__hass = hass;
+    this._hass = hass;
     this._buildItems();
-    this.requestUpdate();
   }
 
   get hass() {
-    return this.__hass;
-  }
-
-  getCardSize() {
-    return 4;
+    return this._hass;
   }
 
   _buildItems() {
-    if (!this.__hass || !this._config?.entities?.length) {
+    if (!this._hass || !this._config?.entities?.length) {
       this._items = [];
       return;
     }
-
-    const merged = [];
+    const arr = [];
     for (const e of this._config.entities) {
-      if (!e?.entity) continue;
-      const st = this.__hass.states[e.entity];
+      const st = this._hass.states[e.entity];
       if (!st) continue;
-
-      const gasList = st.attributes?.gasolineras;
-      if (Array.isArray(gasList)) {
-        gasList.forEach((g, idx) => {
-          const item = {
-            source: e.entity,
-            sourceName: e.name || st.attributes.friendly_name || e.entity,
-            icon: e.icon || "mdi:gas-station",
-            color: e.color || "#4CAF50",
-            nombre: g.nombre || g.name || "Gasolinera",
-            precio:
-              g.precio !== undefined
-                ? Number(g.precio)
-                : g.price !== undefined
-                ? Number(g.price)
-                : NaN,
-            distancia_km:
-              g.distancia_km !== undefined
-                ? Number(g.distancia_km)
-                : g.distance_km !== undefined
-                ? Number(g.distance_km)
-                : NaN,
-            localidad: g.localidad || g.city || "",
-            lat: g.latitud ?? g.lat ?? g.latitude ?? null,
-            lon: g.longitud ?? g.lon ?? g.lng ?? g.longitude ?? null,
-            raw: g,
-            _key: `${e.entity}::${idx}`,
-          };
-          merged.push(item);
+      const gasList = st.attributes.gasolineras || [];
+      for (const g of gasList) {
+        arr.push({
+          ...g,
+          source: e.entity,
+          name: e.name || st.attributes.friendly_name,
+          icon: e.icon || "mdi:gas-station",
+          color: e.color || "#4CAF50",
         });
       }
     }
-
-    this._items = this._sortItems(merged, this._sortBy);
+    this._items = this._sortItems(arr, this._sortBy);
   }
 
-  _sortItems(arr, by) {
-    const items = [...arr];
-    if (by === "price") {
-      items.sort((a, b) => {
-        const ap = isNaN(a.precio) ? Number.POSITIVE_INFINITY : a.precio;
-        const bp = isNaN(b.precio) ? Number.POSITIVE_INFINITY : b.precio;
-        return ap - bp;
-      });
-    } else {
-      items.sort((a, b) => {
-        const ad = isNaN(a.distancia_km)
-          ? Number.POSITIVE_INFINITY
-          : a.distancia_km;
-        const bd = isNaN(b.distancia_km)
-          ? Number.POSITIVE_INFINITY
-          : b.distancia_km;
-        return ad - bd;
-      });
-    }
-    return items;
+  _sortItems(arr, mode) {
+    const list = [...arr];
+    if (mode === "price")
+      list.sort((a, b) => (a.precio ?? 999) - (b.precio ?? 999));
+    else
+      list.sort((a, b) => (a.distancia_km ?? 999) - (b.distancia_km ?? 999));
+    return list;
   }
 
   _onChangeSort(ev) {
-    const val = ev.target.value || ev.detail?.value || "distance";
-    this._sortBy = val;
-    this._items = this._sortItems(this._items || [], val);
-  }
-
-  _toggleMenu(key) {
-    this._expandedMenu = this._expandedMenu === key ? null : key;
+    this._sortBy = ev.target.value;
+    this._items = this._sortItems(this._items, this._sortBy);
   }
 
   _mapsLinks(item) {
-    const { lat, lon } = item;
-    if (lat == null || lon == null) return null;
+    if (!item.latitud && !item.lat) return null;
+    const lat = item.latitud ?? item.lat;
+    const lon = item.longitud ?? item.lon;
     const dest = `${lat},${lon}`;
-
     return {
-      google: `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}`,
-      apple: `maps://?daddr=${encodeURIComponent(dest)}`,
-      waze: `https://waze.com/ul?ll=${encodeURIComponent(dest)}&navigate=yes`,
-      geo: `geo:${dest}`,
+      google: `https://www.google.com/maps/dir/?api=1&destination=${dest}`,
+      waze: `https://waze.com/ul?ll=${dest}&navigate=yes`,
+      apple: `maps://?daddr=${dest}`,
     };
-  }
-
-  _row(item) {
-    const links = this._mapsLinks(item);
-    const key = item._key;
-    const menuOpen = this._expandedMenu === key;
-
-    return html`
-      <div class="row" style=${this._rowBorderStyle(item.color)}>
-        <div class="left">
-          <ha-icon .icon=${item.icon} style=${`color:${item.color}`}></ha-icon>
-        </div>
-        <div class="mid">
-          <div class="name">
-            ${item.nombre}
-            ${item.localidad ? html`<span class="city">· ${item.localidad}</span>` : ""}
-          </div>
-          <div class="meta">
-            <span class="price">
-              ${isNaN(item.precio) ? "—" : `${item.precio.toFixed(3)} €/L`}
-            </span>
-            <span class="dot">•</span>
-            <span class="dist">
-              ${isNaN(item.distancia_km) ? "—" : `${item.distancia_km.toFixed(2)} km`}
-            </span>
-            <span class="dot">•</span>
-            <span class="source">${item.sourceName}</span>
-          </div>
-        </div>
-        <div class="right">
-          ${links
-            ? html`
-                <ha-button
-                  class="navbtn"
-                  @click=${() => this._toggleMenu(key)}
-                >
-                  Navegar
-                </ha-button>
-                ${menuOpen
-                  ? html`
-                      <div class="menu">
-                        <a href=${links.google} target="_blank" rel="noreferrer">Google Maps</a>
-                        <a href=${links.apple}>Apple Maps (iOS)</a>
-                        <a href=${links.waze} target="_blank" rel="noreferrer">Waze</a>
-                      </div>
-                    `
-                  : ""}
-              `
-            : html`<span class="no-loc">Sin coordenadas</span>`}
-        </div>
-      </div>
-    `;
-  }
-
-  _rowBorderStyle(color) {
-    return `border-left: 4px solid ${color || "#4CAF50"}`;
   }
 
   render() {
     if (!this._config) return html``;
-
     const maxH =
       typeof this._config.max_height === "number"
         ? `${this._config.max_height}px`
-        : this._config.max_height || "380px";
-
+        : this._config.max_height;
     return html`
       <ha-card header="⛽ Gasolineras">
         <div class="toolbar">
-          <div class="sort">
-            <label for="sortSel">Ordenar por</label>
-            <select id="sortSel" @change=${this._onChangeSort.bind(this)}>
-              <option value="distance" ?selected=${this._sortBy === "distance"}>
-                Distancia
-              </option>
-              <option value="price" ?selected=${this._sortBy === "price"}>
-                Precio
-              </option>
-            </select>
-          </div>
+          <label>Ordenar por:</label>
+          <select @change=${this._onChangeSort.bind(this)}>
+            <option value="distance" ?selected=${this._sortBy === "distance"}>Distancia</option>
+            <option value="price" ?selected=${this._sortBy === "price"}>Precio</option>
+          </select>
         </div>
-
         <div class="list" style="max-height:${maxH}">
-          ${(!this._items || this._items.length === 0)
-            ? html`<div class="empty">No hay datos para mostrar.</div>`
-            : this._items.map((it) => this._row(it))}
-        </div>
-
-        <div class="footer">
-          <span class="help"
-            >Configura entidades y estilo desde el editor visual.</span
-          >
+          ${this._items?.length
+            ? this._items.map(
+                (g) => html`
+                  <div class="row" style="border-left:4px solid ${g.color}">
+                    <ha-icon .icon=${g.icon}></ha-icon>
+                    <div class="info">
+                      <div class="name">${g.nombre || "Gasolinera"}</div>
+                      <div class="meta">
+                        💰 ${g.precio ?? "-"} €/L · 🧭 ${g.distancia_km ?? "-"} km
+                      </div>
+                    </div>
+                    ${this._mapsLinks(g)
+                      ? html`
+                          <a
+                            class="nav"
+                            href=${this._mapsLinks(g).google}
+                            target="_blank"
+                            >🗺️</a
+                          >
+                        `
+                      : ""}
+                  </div>
+                `
+              )
+            : html`<div class="empty">No hay datos disponibles.</div>`}
         </div>
       </ha-card>
     `;
@@ -308,427 +188,161 @@ class GasStationsListCard extends LitElementBase {
 
   static get styles() {
     return css`
-      :host {
-        display: block;
-      }
       ha-card {
-        overflow: hidden;
+        padding: 8px;
       }
       .toolbar {
         display: flex;
-        align-items: center;
         justify-content: flex-end;
-        padding: 8px 12px 0 12px;
-      }
-      .sort {
-        display: flex;
         align-items: center;
-        gap: 8px;
-      }
-      .sort select {
-        padding: 6px 8px;
-        border-radius: 8px;
-        border: 1px solid var(--divider-color, #ddd);
-        background: var(--card-background-color);
-        color: var(--primary-text-color);
+        gap: 6px;
+        margin-bottom: 8px;
       }
       .list {
         overflow-y: auto;
-        padding: 8px 6px 6px 6px;
-      }
-      .empty {
-        padding: 16px;
-        opacity: 0.7;
       }
       .row {
-        display: grid;
-        grid-template-columns: 40px 1fr auto;
-        gap: 10px;
+        display: flex;
         align-items: center;
-        padding: 10px 12px;
-        background: var(--ha-card-background, var(--card-background-color));
-        border-radius: 12px;
-        margin: 6px 6px 10px 6px;
-        box-shadow: var(--ha-card-box-shadow, 0 1px 2px rgba(0,0,0,0.08));
-        position: relative;
+        gap: 10px;
+        background: var(--card-background-color);
+        border-radius: 8px;
+        padding: 8px 10px;
+        margin-bottom: 6px;
+        box-shadow: var(--ha-card-box-shadow);
       }
-      .left ha-icon {
-        width: 28px;
-        height: 28px;
+      .info {
+        flex: 1;
       }
       .name {
         font-weight: 600;
       }
-      .city {
-        font-weight: 400;
-        opacity: 0.7;
-        margin-left: 6px;
-      }
       .meta {
-        margin-top: 2px;
         font-size: 0.9em;
-        opacity: 0.9;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
+        opacity: 0.8;
       }
-      .meta .dot {
-        opacity: 0.5;
-      }
-      .right {
-        position: relative;
-      }
-      .navbtn {
-        --mdc-theme-primary: var(--primary-color);
-        background: var(--primary-color);
-        color: var(--text-primary-color, #fff);
-        border: none;
-        border-radius: 999px;
-        padding: 6px 10px;
-        cursor: pointer;
-        font-size: 0.9em;
-      }
-      .navbtn:hover {
-        filter: brightness(1.05);
-      }
-      .menu {
-        position: absolute;
-        right: 0;
-        top: 36px;
-        background: var(--card-background-color);
-        border: 1px solid var(--divider-color, #ddd);
-        border-radius: 10px;
-        padding: 8px;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        z-index: 2;
-        min-width: 170px;
-        box-shadow: 0 6px 16px rgba(0,0,0,0.15);
-      }
-      .menu a {
+      .nav {
         text-decoration: none;
-        color: var(--primary-text-color);
-        padding: 6px 8px;
-        border-radius: 6px;
+        font-size: 1.2em;
       }
-      .menu a:hover {
-        background: rgba(0,0,0,0.06);
-      }
-      .no-loc {
+      .empty {
+        padding: 16px;
         opacity: 0.6;
-        font-size: 0.9em;
-      }
-      .footer {
-        padding: 6px 12px 12px 12px;
-        opacity: 0.6;
-        font-size: 0.88em;
+        text-align: center;
       }
     `;
   }
 }
 
-// --------------------
-// Visual Editor
-// --------------------
-class GasStationsListCardEditor extends LitElementBase {
+// -----------------------------------------------------------
+// VISUAL EDITOR
+// -----------------------------------------------------------
+class GasStationsListCardEditor extends LitElementClass {
   static get properties() {
     return {
       hass: {},
       _config: {},
-      _entities: { state: true },
-      _maxHeight: { state: true },
     };
   }
 
   setConfig(config) {
-    const defaults = { entities: [], max_height: 380, initial_sort: "distance" };
-    this._config = { ...defaults, ...config };
-    this._entities = Array.isArray(this._config.entities)
-      ? JSON.parse(JSON.stringify(this._config.entities))
-      : [];
-    this._maxHeight = this._config.max_height;
-  }
-
-  set hass(hass) {
-    this.__hass = hass;
-    this.requestUpdate();
-  }
-
-  get hass() {
-    return this.__hass;
-  }
-
-  _updateConfig() {
-    const newConfig = {
-      ...this._config,
-      entities: this._entities,
-      max_height: this._maxHeight,
-    };
-    this._config = newConfig;
-    fireEvent(this, "config-changed", { config: newConfig });
-  }
-
-  _addEntity() {
-    this._entities = [
-      ...this._entities,
-      {
-        entity: "",
-        name: "",
-        icon: "mdi:gas-station",
-        color: "#4CAF50",
-      },
-    ];
-    this._updateConfig();
-  }
-
-  _removeEntity(idx) {
-    const arr = [...this._entities];
-    arr.splice(idx, 1);
-    this._entities = arr;
-    this._updateConfig();
-  }
-
-  _updateEntity(idx, key, value) {
-    const arr = [...this._entities];
-    arr[idx] = { ...arr[idx], [key]: value };
-    this._entities = arr;
-    this._updateConfig();
-  }
-
-  _renderEntityRow(e, idx) {
-    const hass = this.__hass;
-    return html`
-      <div class="entity-row">
-        <div class="col entity">
-          <label>Entidad</label>
-          <ha-entity-picker
-            .hass=${hass}
-            .value=${e.entity || ""}
-            .includeDomains=${["sensor"]}
-            @value-changed=${(ev) =>
-              this._updateEntity(idx, "entity", ev.detail.value)}
-          ></ha-entity-picker>
-        </div>
-
-        <div class="col name">
-          <label>Nombre mostrado</label>
-          <ha-textfield
-            .value=${e.name || ""}
-            @input=${(ev) => this._updateEntity(idx, "name", ev.target.value)}
-            placeholder="(opcional)"
-          ></ha-textfield>
-        </div>
-
-        <div class="col icon">
-          <label>Icono</label>
-          ${customElements.get("ha-icon-picker")
-            ? html`<ha-icon-picker
-                .hass=${hass}
-                .value=${e.icon || "mdi:gas-station"}
-                @value-changed=${(ev) =>
-                  this._updateEntity(idx, "icon", ev.detail.value)}
-              ></ha-icon-picker>`
-            : html`<ha-textfield
-                .value=${e.icon || "mdi:gas-station"}
-                @input=${(ev) =>
-                  this._updateEntity(idx, "icon", ev.target.value)}
-                placeholder="mdi:gas-station"
-              ></ha-textfield>`}
-        </div>
-
-        <div class="col color">
-          <label>Color</label>
-          <input
-            type="color"
-            .value=${e.color || "#4CAF50"}
-            @input=${(ev) => this._updateEntity(idx, "color", ev.target.value)}
-          />
-        </div>
-
-        <div class="col actions">
-          <mwc-button
-            class="danger"
-            @click=${() => this._removeEntity(idx)}
-            label="Eliminar"
-          ></mwc-button>
-        </div>
-      </div>
-    `;
+    this._config = config;
   }
 
   render() {
+    if (!this.hass) return html``;
+    const entities = this._config?.entities || [];
     return html`
-      <div class="wrapper">
-        <div class="section">
-          <div class="header">Entidades</div>
-          ${(!this._entities || this._entities.length === 0)
-            ? html`<div class="hint">Añade una o más entidades de tipo <code>sensor.gasolineras_cercanas_*</code>.</div>`
-            : ""}
-          ${this._entities.map((e, idx) => this._renderEntityRow(e, idx))}
-          <mwc-button
-            class="add"
-            @click=${this._addEntity}
-            label="Añadir entidad"
-          ></mwc-button>
-        </div>
-
-        <div class="section">
-          <div class="header">Visual</div>
-          <div class="grid">
-            <div class="col">
-              <label>Altura máxima (px)</label>
+      <div class="editor">
+        <h4>Entidades</h4>
+        ${entities.map(
+          (e, i) => html`
+            <div class="row">
+              <ha-entity-picker
+                .hass=${this.hass}
+                .value=${e.entity}
+                .includeDomains=${["sensor"]}
+                @value-changed=${(ev) =>
+                  this._updateEntity(i, "entity", ev.detail.value)}
+              ></ha-entity-picker>
               <ha-textfield
-                .value=${String(this._maxHeight ?? "")}
-                type="number"
-                min="180"
-                max="1200"
-                step="10"
-                @input=${(ev) =>
-                  ((this._maxHeight = Number(ev.target.value) || 380),
-                  this._updateConfig())}
+                .value=${e.name || ""}
+                label="Nombre"
+                @input=${(ev) => this._updateEntity(i, "name", ev.target.value)}
               ></ha-textfield>
+              <input
+                type="color"
+                .value=${e.color || "#4CAF50"}
+                @input=${(ev) => this._updateEntity(i, "color", ev.target.value)}
+              />
+              <mwc-button @click=${() => this._removeEntity(i)}>🗑️</mwc-button>
             </div>
-          </div>
-          <div class="small">
-            La lista tendrá scroll interno cuando supere esta altura.
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="header">Orden inicial</div>
-          <div class="grid">
-            <div class="col">
-              <label>Orden</label>
-              <select
-                .value=${this._config.initial_sort || "distance"}
-                @change=${(ev) => {
-                  this._config = {
-                    ...this._config,
-                    initial_sort: ev.target.value,
-                  };
-                  this._updateConfig();
-                }}
-              >
-                <option value="distance">Distancia</option>
-                <option value="price">Precio</option>
-              </select>
-            </div>
-          </div>
-          <div class="small">
-            El usuario podrá cambiar el orden dentro de la tarjeta.
-          </div>
-        </div>
+          `
+        )}
+        <mwc-button @click=${this._addEntity}>➕ Añadir entidad</mwc-button>
+        <h4>Altura máxima</h4>
+        <ha-textfield
+          type="number"
+          .value=${this._config?.max_height || 400}
+          @input=${(ev) => this._set("max_height", ev.target.value)}
+        ></ha-textfield>
       </div>
     `;
+  }
+
+  _updateEntity(i, key, val) {
+    const arr = [...(this._config.entities || [])];
+    arr[i] = { ...arr[i], [key]: val };
+    this._set("entities", arr);
+  }
+
+  _removeEntity(i) {
+    const arr = [...(this._config.entities || [])];
+    arr.splice(i, 1);
+    this._set("entities", arr);
+  }
+
+  _addEntity() {
+    const arr = [...(this._config.entities || [])];
+    arr.push({ entity: "", name: "", color: "#4CAF50" });
+    this._set("entities", arr);
+  }
+
+  _set(key, val) {
+    const newConfig = { ...this._config, [key]: val };
+    fireEvent(this, "config-changed", { config: newConfig });
   }
 
   static get styles() {
     return css`
-      .wrapper {
-        padding: 8px 4px 12px 4px;
+      .editor {
+        padding: 8px;
       }
-      .section {
-        border: 1px solid var(--divider-color, #dcdcdc);
-        border-radius: 12px;
-        padding: 12px;
-        margin: 10px 0;
-        background: var(--card-background-color);
-      }
-      .header {
-        font-weight: 700;
-        margin-bottom: 10px;
-      }
-      .hint {
-        opacity: 0.7;
-        margin-bottom: 10px;
-      }
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit,minmax(220px,1fr));
-        gap: 12px;
-      }
-      .entity-row {
-        display: grid;
-        grid-template-columns: 1.5fr 1.2fr 1fr 0.6fr auto;
-        gap: 10px;
-        align-items: end;
-        margin: 8px 0;
-        padding-bottom: 8px;
-        border-bottom: 1px dashed var(--divider-color, #ddd);
-      }
-      .entity-row:last-child {
-        border-bottom: none;
-      }
-      label {
-        display: block;
-        font-size: 0.9em;
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
         margin-bottom: 6px;
-        opacity: 0.9;
-      }
-      mwc-button.add {
-        --mdc-theme-primary: var(--primary-color);
-        margin-top: 8px;
-      }
-      mwc-button.danger {
-        --mdc-theme-primary: var(--error-color, #c62828);
-      }
-      .small {
-        margin-top: 6px;
-        font-size: 0.9em;
-        opacity: 0.7;
-      }
-      select {
-        width: 100%;
-        padding: 8px 10px;
-        border-radius: 8px;
-        border: 1px solid var(--divider-color,#ddd);
-        background: var(--card-background-color);
-        color: var(--primary-text-color);
-      }
-      ha-textfield {
-        width: 100%;
       }
       input[type="color"] {
-        width: 100%;
-        height: 40px;
-        padding: 0;
+        width: 40px;
+        height: 36px;
         border: none;
-        background: transparent;
-      }
-      code {
-        background: rgba(0,0,0,0.06);
-        padding: 2px 6px;
-        border-radius: 6px;
       }
     `;
   }
 }
 
-// --------------------
-// Register elements
-// --------------------
-if (!customElements.get("gas-stations-list-card-editor")) {
-  customElements.define("gas-stations-list-card-editor", GasStationsListCardEditor);
-}
+// -----------------------------------------------------------
+// REGISTRO GLOBAL
+// -----------------------------------------------------------
+customElements.define("gas-stations-list-card", GasStationsListCard);
+customElements.define("gas-stations-list-card-editor", GasStationsListCardEditor);
 
-if (!customElements.get("gas-stations-list-card")) {
-  customElements.define("gas-stations-list-card", GasStationsListCard);
-}
-
-// Register with Lovelace
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: "gas-stations-list-card",
   name: "Gas Stations List Card",
-  description: "Muestra listas de gasolineras cercanas con ordenación y personalización visual.",
-  preview: false,
-  documentationURL: HELP_URL,
+  description:
+    "Lista de gasolineras con ordenación, colores, iconos y editor visual.",
 });
-
-console.info(
-  "%c  GAS-STATIONS-LIST-CARD  \n%c  Version 1.0.0  ",
-  "color: orange; font-weight: bold; background: black",
-  "color: white; font-weight: bold; background: dimgray"
-);
