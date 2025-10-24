@@ -11,10 +11,20 @@
 //   url: /local/gas-stations-list-card.js
 //   type: module
 
+/* eslint no-console: 0 */// gas-stations-list-card.js
+// Custom card for Home Assistant: Gas Stations List Card
+// - Visual editor (no YAML required)
+// - Supports multiple sensor entities (sensor.gasolineras_cercanas_*)
+// - Per-entity UI customization (name, icon, color)
+// - In-card sorting (price / distance)
+// - Max height with internal scroll
+//
+// Place this file at: /config/www/gas-stations-list-card.js
+// Add to Lovelace resources:
+//   url: /local/gas-stations-list-card.js
+//   type: module
+
 /* eslint no-console: 0 */
-if (!customElements.get("gas-stations-list-card")) {
-  const Lit = window.litElement || window.litHtml || window.LitElement;
-}
 
 const HELP_URL =
   "https://developers.home-assistant.io/docs/frontend/custom-ui/custom-card/";
@@ -24,17 +34,13 @@ const fireEvent = (node, type, detail, options) => {
   detail = detail === null || detail === undefined ? {} : detail;
   const event = new Event(type, {
     bubbles: options.bubbles === undefined ? true : options.bubbles,
-    cancelable:
-      options.cancelable === undefined ? false : options.cancelable,
+    cancelable: options.cancelable === undefined ? false : options.cancelable,
     composed: options.composed === undefined ? true : options.composed,
   });
   event.detail = detail;
   node.dispatchEvent(event);
   return event;
 };
-
-const supportsFeature = (stateObj, feature) =>
-  (stateObj.attributes.supported_features & feature) !== 0;
 
 // --------------------
 // LitElement imports
@@ -46,31 +52,21 @@ const { html, css } = window.litHtml || window.Lit || window.litElement || windo
 const LitElementBase =
   window.LitElement || window.litElement || Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 
-const literalHtml = (strings, ...values) => html(strings, ...values);
-
-// Fallbacks for older HA builds:
-const HA_SELECT_TAG = "ha-select";
-const HA_TEXTFIELD_TAG = "ha-textfield";
-const HA_SWITCH_TAG = "ha-switch";
-const HA_ICON_PICKER_TAG = "ha-icon-picker";
-const HA_ENTITY_PICKER_TAG = "ha-entity-picker";
-
 // --------------------
 // Main Card
 // --------------------
-class GasStationsListCard extends (window.LitElement || LitElementBase) {
+class GasStationsListCard extends LitElementBase {
   static get properties() {
     return {
       hass: {},
       _config: {},
       _items: { state: true },
       _sortBy: { state: true },
-      _expandedMenu: { state: true }, // track which item menu is open
+      _expandedMenu: { state: true },
     };
   }
 
   static getStubConfig(hass) {
-    // Try to suggest one matching entity as a stub
     const anySensor =
       hass &&
       Object.keys(hass.states).find((e) =>
@@ -88,16 +84,12 @@ class GasStationsListCard extends (window.LitElement || LitElementBase) {
           ]
         : [],
       max_height: 380,
-      initial_sort: "distance", // or "price"
+      initial_sort: "distance",
     };
   }
 
   static getConfigElement() {
     return document.createElement("gas-stations-list-card-editor");
-  }
-
-  static get cardType() {
-    return "gas-stations-list-card";
   }
 
   setConfig(config) {
@@ -124,7 +116,6 @@ class GasStationsListCard extends (window.LitElement || LitElementBase) {
   }
 
   getCardSize() {
-    // approx number of rows
     return 4;
   }
 
@@ -143,7 +134,6 @@ class GasStationsListCard extends (window.LitElement || LitElementBase) {
       const gasList = st.attributes?.gasolineras;
       if (Array.isArray(gasList)) {
         gasList.forEach((g, idx) => {
-          // Normalize fields with safe fallbacks
           const item = {
             source: e.entity,
             sourceName: e.name || st.attributes.friendly_name || e.entity,
@@ -173,7 +163,6 @@ class GasStationsListCard extends (window.LitElement || LitElementBase) {
       }
     }
 
-    // initial sort
     this._items = this._sortItems(merged, this._sortBy);
   }
 
@@ -186,7 +175,6 @@ class GasStationsListCard extends (window.LitElement || LitElementBase) {
         return ap - bp;
       });
     } else {
-      // distance
       items.sort((a, b) => {
         const ad = isNaN(a.distancia_km)
           ? Number.POSITIVE_INFINITY
@@ -216,14 +204,10 @@ class GasStationsListCard extends (window.LitElement || LitElementBase) {
     const dest = `${lat},${lon}`;
 
     return {
-      google: `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
-        dest
-      )}`,
+      google: `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}`,
       apple: `maps://?daddr=${encodeURIComponent(dest)}`,
-      waze: `https://waze.com/ul?ll=${encodeURIComponent(
-        dest
-      )}&navigate=yes`,
-      geo: `geo:${dest}`, // some Android apps handle this
+      waze: `https://waze.com/ul?ll=${encodeURIComponent(dest)}&navigate=yes`,
+      geo: `geo:${dest}`,
     };
   }
 
@@ -448,7 +432,7 @@ class GasStationsListCard extends (window.LitElement || LitElementBase) {
 // --------------------
 // Visual Editor
 // --------------------
-class GasStationsListCardEditor extends (window.LitElement || LitElementBase) {
+class GasStationsListCardEditor extends LitElementBase {
   static get properties() {
     return {
       hass: {},
@@ -476,7 +460,6 @@ class GasStationsListCardEditor extends (window.LitElement || LitElementBase) {
     return this.__hass;
   }
 
-  // ------ helpers ------
   _updateConfig() {
     const newConfig = {
       ...this._config,
@@ -726,50 +709,26 @@ class GasStationsListCardEditor extends (window.LitElement || LitElementBase) {
 // --------------------
 // Register elements
 // --------------------
-
-// Asegura que el editor se registra antes del getConfigElement
 if (!customElements.get("gas-stations-list-card-editor")) {
-  customElements.define(
-    "gas-stations-list-card-editor",
-    GasStationsListCardEditor
-  );
+  customElements.define("gas-stations-list-card-editor", GasStationsListCardEditor);
 }
 
 if (!customElements.get("gas-stations-list-card")) {
   customElements.define("gas-stations-list-card", GasStationsListCard);
 }
 
-// Garantiza compatibilidad con Lovelace GUI
+// Register with Lovelace
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: "gas-stations-list-card",
   name: "Gas Stations List Card",
-  description:
-    "Muestra listas de gasolineras cercanas con ordenación y personalización visual.",
-});
-
-// Asegura que Home Assistant pueda instanciar el editor
-GasStationsListCard.getConfigElement = function () {
-  return document.createElement("gas-stations-list-card-editor");
-};
-GasStationsListCard.getStubConfig = function () {
-  return {
-    entities: [],
-    max_height: 380,
-    initial_sort: "distance",
-  };
-};
-
-
-// --------------------
-// Lovelace Catalogue entry (nice to have)
-// --------------------
-window.customCards = window.customCards || [];
-window.customCards.push({
-  type: "gas-stations-list-card",
-  name: "Gas Stations List (Custom)",
-  description:
-    "Lista de gasolineras con orden por precio/distancia, editor visual y múltiples entidades.",
+  description: "Muestra listas de gasolineras cercanas con ordenación y personalización visual.",
   preview: false,
   documentationURL: HELP_URL,
 });
+
+console.info(
+  "%c  GAS-STATIONS-LIST-CARD  \n%c  Version 1.0.0  ",
+  "color: orange; font-weight: bold; background: black",
+  "color: white; font-weight: bold; background: dimgray"
+);
