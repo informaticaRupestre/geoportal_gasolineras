@@ -81,20 +81,6 @@ Integración personalizada para **Home Assistant** que obtiene información en t
 
 Una vez instalada la tarjeta (`gas-stations-list-card.js`), añádela en tu dashboard:
 
-```yaml
-type: custom:gas-stations-list-card
-entity: sensor.gasolineras_cercanas_gasoleo_a
-title: ⛽ Gasolineras cercanas
-max_height: 400px
-```
-
-Opciones disponibles:
-| Propiedad | Descripción |
-|------------|--------------|
-| `entity` | Sensor de tipo `gasolineras_cercanas` o `lista_baratas` |
-| `max_height` | Altura máxima con scroll interno |
-| `order_by` | `precio` o `distancia` |
-| `open_in` | `auto`, `google`, `waze` — controla la redirección al mapa |
 
 ---
 
