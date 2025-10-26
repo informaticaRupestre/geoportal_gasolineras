@@ -1,6 +1,10 @@
 
 # 🗺️ Integración Geoportal Gasolineras para Home Assistant
 
+**Versión:** v1.0.0  
+**Tipo:** Custom Component  
+**Autor:** [informaticaRupestre](https://github.com/informaticaRupestre)
+
 Esta integración permite consultar los precios de las estaciones de servicio en España
 gracias a los servicios REST públicos del **Ministerio para la Transición Ecológica y el Reto Demográfico (MITECO)**.
 
