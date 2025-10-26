@@ -1,131 +1,144 @@
-# ⛽ Geoportal Gasolineras
 
-Integración personalizada para **Home Assistant** que obtiene información en tiempo real de las gasolineras de España desde el [Geoportal de Energía del Ministerio para la Transición Ecológica](https://geoportal.minetur.gob.es/RecargaCarburantes/), permitiendo visualizar los precios, distancias y estaciones más cercanas mediante sensores y una tarjeta Lovelace interactiva.
+# 🗺️ Integración Geoportal Gasolineras para Home Assistant
 
----
+Esta integración permite consultar los precios de las estaciones de servicio en España
+gracias a los servicios REST públicos del **Ministerio para la Transición Ecológica y el Reto Demográfico (MITECO)**.
 
-## 🧩 Características principales
-
-- 🚗 **Dos modos de funcionamiento**:
-  - **Por provincia:** muestra el total, la más barata y la lista de las gasolineras más económicas.
-  - **Por coordenadas:** muestra las gasolineras dentro de un radio determinado desde tu ubicación o una zona de Home Assistant.
-- 🗺️ **Tarjeta Lovelace personalizada** (`gas-stations-list-card.js`) con:
-  - Listado ordenable por **distancia** o **precio**.
-  - Integración con **Google Maps**, **Waze**, o mapa interno.
-  - Scroll interno para listas largas.
-- ⚙️ **Integración por UI (config_flow)**: no requiere editar `configuration.yaml`.
-- 🔁 **Actualización automática** cada 4 h.
+Permite visualizar las gasolineras más baratas por provincia o las gasolineras más cercanas
+a una ubicación determinada (según coordenadas y radio en kilómetros).
 
 ---
 
-## ⚙️ Instalación
+## 🚀 Características principales
 
-### 🪄 Opción 1: Instalar desde HACS (recomendada)
+- Datos actualizados directamente desde la API oficial del MITECO.
+- Dos modos de funcionamiento:
+  - **Por provincia:** muestra las estaciones de servicio de una provincia concreta.
+  - **Por coordenadas:** muestra las gasolineras dentro de un radio determinado de una latitud/longitud.
 
-1. Abre **HACS → Integraciones → Menú (⋮) → Repositorios personalizados**  
-2. Añade este repositorio:
-   ```
-   https://github.com/informaticaRupestre/geoportal_gasolineras
-   ```
-3. Categoría: `Integration`
-4. Guarda y busca **Geoportal Gasolineras** en la lista de integraciones de HACS.  
-5. Instálala y reinicia Home Assistant.
-
-🧠 También puedes hacerlo directamente pulsando este botón:
-
-[![Añadir a HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=informaticaRupestre&repository=geoportal_gasolineras&category=integration)
+[//]: # (- Cálculo automático de distancias &#40;Haversine&#41;.)
+[//]: # (- Conversión de coordenadas con coma a punto decimal.)
+- Sensor con listado de gasolineras, precios, direcciones y distancias.
+- Sensor adicional con el número total de estaciones.
+- Posibilidad de crear grupos automáticos de sensores.
+- Compatible con tarjetas de tipo Markdown.
 
 ---
 
-### 🧰 Opción 2: Instalación manual
+## 🧰 Instalación
 
-1. Copia el contenido de este repositorio en tu instalación de Home Assistant:
+### 📦 Método manual
+
+1. Descarga el contenido del repositorio y copia la carpeta `geoportal_gasolineras`
+   dentro del directorio `custom_components` de tu instalación de Home Assistant.
+   La ruta final debe ser:
+
+   ```bash
+   /config/custom_components/geoportal_gasolineras/
    ```
-   config/custom_components/geoportal_gasolineras/
-   ```
-2. Copia la tarjeta Lovelace a:
-   ```
-   config/www/community/geoportal_gasolineras/gas-stations-list-card.js
-   ```
-3. Reinicia Home Assistant.
-4. Añade el recurso Lovelace:
-   ```yaml
-   resources:
-     - url: /hacsfiles/geoportal_gasolineras/gas-stations-list-card.js
-       type: module
-   ```
+
+2. Reinicia Home Assistant para que se detecte la nueva integración.
+
+3. Añade la integración desde la interfaz de Home Assistant:
+   - Ve a **Configuración → Dispositivos y servicios → Añadir integración**.
+   - Busca **Geoportal Gasolineras**.
 
 ---
 
-## 🧩 Configuración
+## ⚙️ Configuración
 
-1. Ve a **Ajustes → Dispositivos y servicios → Añadir integración**  
-2. Busca **Geoportal Gasolineras**
-3. Elige el modo de configuración:
+### 🔹 Modo Provincia
 
-### 🗺️ Modo “Provincia”
-- Selecciona la provincia y el tipo de carburante  
-- Se crearán sensores como:
-  - `sensor.total_estaciones_madrid`
-  - `sensor.mas_barata_madrid_gasoleo_a`
-  - `sensor.lista_baratas_madrid_gasoleo_a`
-  - y 5 sensores individuales (`gasolinera_1_...` hasta `gasolinera_5_...`)
+Permite obtener los datos de una provincia específica y un tipo de carburante.
 
-### 📍 Modo “Coordenadas”
-- Define latitud, longitud y radio de búsqueda (en km)
-- Obtendrás un sensor con las gasolineras más cercanas a esa posición
+- Selecciona una **provincia** del listado.
+- Elige el **tipo de carburante** entre:
+  - Gasolina 95 E5
+  - Gasolina 98 E5
+  - Gasóleo A
+  - Gasóleo Premium
 
----
-
-## 🖼️ Tarjeta Lovelace personalizada
-
-Una vez instalada la tarjeta (`gas-stations-list-card.js`), añádela en tu dashboard:
-
+El sistema creará varios sensores automáticos, incluyendo:
+- `sensor.total_estaciones_[provincia]`
+- `sensor.gasolinera_barata_[provincia]_[producto]`
+- `sensor.lista_gasolineras_baratas_[provincia]_[producto]`
+- Sensores individuales para las 5 más baratas.
 
 ---
 
-## 📁 Estructura del proyecto
+### 🔹 Modo Coordenadas
 
-```
-custom_components/geoportal_gasolineras/
-│
-├── __init__.py
-├── api.py
-├── config_flow.py
-├── const.py
-├── sensor.py
-├── manifest.json
-│
-www/community/geoportal_gasolineras/
-└── gas-stations-list-card.js
+Permite definir una ubicación concreta mediante:
+- **Latitud**
+- **Longitud**
+- **Radio (km)**
+- **Tipo de carburante**
+
+Se creará un sensor con las gasolineras dentro del radio indicado, con los siguientes atributos:
+
+```yaml
+gasolineras:
+  - nombre: REPSOL
+    direccion: AVENIDA CASTILLA, 12
+    localidad: MADRID
+    precio: 1.379
+    latitud: 40.4168
+    longitud: -3.7038
+    distancia_km: 2.34
+  - nombre: ...
 ```
 
 ---
+## 🧾 Ejemplo de tarjeta Mapa o Lista
 
-## 🧠 Entidades creadas
+Para representar visualmente las gasolineras obtenidas por esta integración, puedes utilizar la tarjeta
+[**Lovelace Gas Stations List Card**](https://github.com/informaticaRupestre/lovelace-gas-stations-list-card).
 
-| Tipo | Nombre ejemplo | Descripción |
-|------|-----------------|--------------|
-| `sensor.total_estaciones_madrid` | Total estaciones - Madrid | Número total de estaciones |
-| `sensor.mas_barata_madrid_gasoleo_a` | Más barata - Madrid (Gasóleo A) | Nombre y precio de la más barata |
-| `sensor.lista_baratas_madrid_gasoleo_a` | Lista gasolineras baratas | Lista completa en atributos |
-| `sensor.gasolineras_cercanas_gasoleo_a` | Gasolineras cercanas | Gasolineras dentro de un radio |
+Esta tarjeta permite mostrar de forma clara las gasolineras más cercanas o las más baratas de una provincia,
+usando la entidad generada por esta integración (`sensor.lista_gasolineras_baratas_*` o `sensor.gasolineras_cercanas_*`).
+
+Ejemplo básico de uso:
+
+```yaml
+type: custom:gas-stations-list-card
+entity: sensor.gasolineras_cercanas_madrid_gasoleo_a
+title: ⛽ Gasolineras más cercanas
+```
+
+## 🧾 Ejemplo de tarjeta Markdown
+
+Puedes mostrar los datos de la entidad directamente con una tarjeta de tipo Markdown:
+
+```yaml
+type: markdown
+title: ⛽ Gasolineras cercanas
+content: >-
+  {% set g = state_attr('sensor.gasolineras_cercanas_*', 'gasolineras') %}
+  {% if g is not none and (g | count) > 0 %}
+  {% for e in g %}
+  **{{ loop.index }}. {{ e.nombre }}**  
+  📍 {{ e.localidad }} — {{ e.direccion }}  
+  💰 **{{ e.precio }} €/L** — 🧭 {{ e.distancia_km }} km  
+  
+  
+  {% endfor %}
+  {% else %}
+  ⚠️ No hay gasolineras para mostrar ahora mismo.
+  {% endif %}
+```
 
 ---
 
-## 🧰 Dependencias
+## 🧠 Créditos
 
-- `requests` (instalada automáticamente por Home Assistant)
-
----
-
-## 🧾 Licencia
-
-Este proyecto se distribuye bajo licencia [MIT](LICENSE).
+Desarrollado por **@informaticaRupestre**  
+Datos obtenidos del portal público del [Ministerio para la Transición Ecológica y el Reto Demográfico (MITECO)](https://geoportalgasolineras.es/).
 
 ---
 
-## 👨‍💻 Autor
+## 🪪 Licencia
 
-**Informatica Rupestre**  
-Repositorio: [github.com/informaticaRupestre/geoportal_gasolineras](https://github.com/informaticaRupestre/geoportal_gasolineras)
+Este proyecto está bajo una licencia personalizada basada en MIT.  
+Se permite el uso personal, educativo y no comercial.  
+El uso comercial del software está **prohibido sin autorización previa del autor**.  
+Consulta el archivo [LICENSE](./LICENSE) para más detalles.
